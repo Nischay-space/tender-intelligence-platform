@@ -1,13 +1,15 @@
 [project]
 name = "tender-intelligence-platform"
 version = "0.1.0"
-description = "Add your description here"
+description = "Production-grade Tender Intelligence Platform for scraping, processing, and analyzing government tenders."
 readme = "README.md"
 authors = [
     { name = "Nischay-space", email = "nischayrathore1@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pydantic-settings>=2.0",
+]
 
 [project.scripts]
 tender-intelligence-platform = "tender_intelligence_platform:main"
@@ -15,3 +17,9 @@ tender-intelligence-platform = "tender_intelligence_platform:main"
 [build-system]
 requires = ["uv_build>=0.12.0,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-mock>=3.15.1",
+]
