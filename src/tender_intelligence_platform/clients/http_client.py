@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 
 from requests import ConnectionError, HTTPError, Timeout
+import requests
 
 from tender_intelligence_platform.exceptions import (
     HTTPConnectionError,

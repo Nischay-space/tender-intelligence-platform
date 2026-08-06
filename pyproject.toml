@@ -8,12 +8,13 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "beautifulsoup4>=4.15.0",
     "pydantic-settings>=2.0",
     "requests>=2.34.2",
 ]
 
 [project.scripts]
-tender-intelligence-platform = "tender_intelligence_platform:main"
+tender-intelligence-platform = "tender_intelligence_platform.main:main"
 
 [build-system]
 requires = ["uv_build>=0.12.0,<0.13.0"]

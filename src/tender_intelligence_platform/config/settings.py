@@ -8,6 +8,7 @@ No other module should directly access os.environ.
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -30,7 +31,8 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Return a cached Settings instance."""
+    print("Current working directory:", Path.cwd())
+    print(".env exists:", Path(".env").exists())
     return Settings()
 
 
