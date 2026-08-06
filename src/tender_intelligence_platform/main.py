@@ -8,8 +8,7 @@ def main() -> None:
     try:
         scraper = CPPPScraper(client)
 
-        tenders = scraper.scrape_homepage()
-
+        tenders = scraper.scrape()
         print(f"\nFound {len(tenders)} tenders\n")
 
         for tender in tenders:
