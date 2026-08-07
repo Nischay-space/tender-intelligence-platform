@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     http_timeout: int = 30
     max_retries: int = 3
 
+    cppp_base_url: str
+    cppp_home_url: str
+
     database_url: str
 
     model_config = SettingsConfigDict(
