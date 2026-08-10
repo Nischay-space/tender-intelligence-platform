@@ -1,60 +1,36 @@
-from datetime import datetime
-from decimal import Decimal
-from enum import Enum
-from pydantic import BaseModel, HttpUrl, Field
+from pydantic import BaseModel
 
-class TenderStatus(str, Enum):
-    OPEN = "Open"
-    CLOSED = "Closed"
-    CANCELLED = "Cancelled"
-
-
-class ProcurementType(str, Enum):
-    GOODS = "Goods"
-    WORKS = "Works"
-    SERVICES = "Services"
-
-class TenderDocument(BaseModel):
-
-    name: str
-
-    document_type: str
-
-    description: str | None = None
-
-    download_url: HttpUrl
-
-    size_kb: float | None = None
-    
-    
 
 class Tender(BaseModel):
+    """Normalized tender representation."""
 
     tender_id: str
-    reference_number: str | None = None
+    tender_title: str
+    organization: str | None = None
+    tender_reference_number: str | None = None
+    tender_url: str
 
-    title: str
-    description: str | None = None
+    published_date: str | None = None
+    bid_submission_start_date: str | None = None
+    bid_submission_end_date: str | None = None
+    opening_date: str | None = None
 
-    organization: str
-    tender_url: HttpUrl
+    estimated_value: float | None = None
+    earnest_money_deposit: float | None = None
+    tender_fee: float | None = None
+    currency: str | None = None
 
-    procurement_type: ProcurementType
-    tender_type: str
+    tender_type: str | None = None
+    category: str | None = None
+    procurement_type: str | None = None
 
-    estimated_value: Decimal | None = None
-    currency: str = "INR"
-
-    tender_fee: Decimal | None = None
-    emd_amount: Decimal | None = None
-
-    published_date: datetime | None = None
-    bid_start_date: datetime | None = None
-    bid_end_date: datetime | None = None
-    bid_opening_date: datetime | None = None
-
+    state: str | None = None
+    city: str | None = None
     work_location: str | None = None
-    documents: list[TenderDocument] = Field(default_factory=list)
 
-    status: TenderStatus
+    status: str | None = None
+    withdrawal_allowed: bool | None = None
 
+    form_of_contract: str | None = None
+    payment_mode: str | None = None
+    work_description: str | None = None

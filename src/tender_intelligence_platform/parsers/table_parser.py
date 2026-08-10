@@ -1,43 +1,39 @@
-from bs4 import BeautifulSoup, Tag
+from bs4 import Tag
 
 
 class TableParser:
-    """
-    Utility class for extracting label-value pairs
-    from HTML tables.
-    """
+    """Parse CPPP caption/value tables into dictionaries."""
 
     @staticmethod
     def parse(table: Tag) -> dict[str, str]:
         """
-        Convert a table into a dictionary.
-
-        Example:
-
-        Tender ID  -> 2026_ARMHA_920877_1
-        Tender Type -> Open Tender
+        Convert a CPPP table containing td_caption/td_field
+        pairs into a dictionary.
         """
 
-        data: dict[str, str] = {}
+        result: dict[str, str] = {}
 
-        rows = table.find_all("tr")
+        captions = table.select("td.td_caption")
 
-        for row in rows:
+        for caption in captions:
+            key = caption.get_text(" ", strip=True)
 
-            cells = row.find_all("td")
-
-            # We expect label/value pairs.
-            if len(cells) < 2:
+            if not key:
                 continue
 
-            # Iterate over pairs of cells.
-            for i in range(0, len(cells) - 1, 2):
+            value_cells = caption.find_next_siblings(
+                "td",
+                class_="td_field",
+            )
 
-                label = cells[i].get_text(" ", strip=True)
+            if not value_cells:
+                continue
 
-                value = cells[i + 1].get_text(" ", strip=True)
+            value = value_cells[0].get_text(
+                " ",
+                strip=True,
+            )
 
-                if label:
-                    data[label] = value
+            result[key] = value
 
-        return data
+        return result
