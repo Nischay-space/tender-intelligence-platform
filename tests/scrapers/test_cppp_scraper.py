@@ -39,7 +39,7 @@ def test_scrape_detail():
     scraper = CPPPScraper(
         fake_client,
         settings,
-    )
+)
 
     link = TenderLink(
         title="Test Tender",
@@ -53,6 +53,7 @@ def test_scrape_detail():
     )
 
     tender = scraper.scrape_detail(link)
+    
 
     assert isinstance(
         tender,

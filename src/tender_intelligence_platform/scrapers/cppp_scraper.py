@@ -18,24 +18,22 @@ class CPPPScraper(BaseScraper):
         "https://eprocure.gov.in/eprocure/app"
     )
 
-    def __init__(self, client, settings):
+    def __init__(
+        self,
+        client,
+        settings,
+    ):
         super().__init__(client, settings)
 
         self._home_parser = CPPPHomeParser()
         self._tender_parser = CPPPTenderParser()
 
-    def scrape_homepage(
-        self,
-    ) -> list[TenderLink]:
+    def scrape_homepage(self) -> list[TenderLink]:
         """Scrape active tender links."""
 
-        html = self.download(
-            self.HOME_URL
-        )
+        html = self.download(self.HOME_URL)
 
-        return self._home_parser.parse(
-            html
-        )
+        return self._home_parser.parse(html)
 
     def scrape_detail(
         self,
@@ -50,4 +48,4 @@ class CPPPScraper(BaseScraper):
         return self._tender_parser.parse(
             html,
             tender_url=str(link.detail_url),
-        )
+        )   
