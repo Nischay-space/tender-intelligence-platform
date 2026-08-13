@@ -27,6 +27,7 @@ def main():
         ingestion_service = TenderIngestionService(
             scraper,
             repository,
+            session,
         )
 
         try:

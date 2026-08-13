@@ -1,5 +1,7 @@
 import logging
 
+from sqlalchemy.orm import Session
+
 from tender_intelligence_platform.models.ingestion_result import (
     IngestionFailure,
     IngestionResult,
@@ -20,9 +22,11 @@ class TenderIngestionService:
         self,
         scraper: CPPPScraper,
         repository: TenderRepository,
+        session: Session,
     ):
         self._scraper = scraper
         self._repository = repository
+        self._session = session
 
     def ingest(self) -> IngestionResult:
         """Scrape, persist, and report the ingestion result."""
@@ -42,9 +46,10 @@ class TenderIngestionService:
 
         for link in links:
             try:
-                tender = self._scraper.scrape_detail(link)
+                with self._session.begin_nested():
+                    tender = self._scraper.scrape_detail(link)
 
-                self._repository.upsert(tender)
+                    self._repository.upsert(tender)
 
                 result.tenders.append(tender)
                 result.successful += 1
