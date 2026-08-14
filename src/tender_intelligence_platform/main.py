@@ -11,8 +11,8 @@ from tender_intelligence_platform.services.tender_ingestion_service import (
 )
 
 
-def main():
-    configure_logging()
+def ingest_once():
+    """Run one complete tender ingestion cycle."""
 
     client = HTTPClient()
 
@@ -35,9 +35,19 @@ def main():
 
             session.commit()
 
+            return result
+
         except Exception:
             session.rollback()
             raise
+
+
+def main():
+    """Run one ingestion cycle."""
+
+    configure_logging()
+
+    result = ingest_once()
 
     print(
         f"Successfully ingested "

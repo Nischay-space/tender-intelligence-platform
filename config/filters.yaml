@@ -1,0 +1,28 @@
+keyword_filter:
+  enabled: true
+
+  include_keywords:
+    - construction
+    - civil work
+    - civil works
+    - building construction
+    - infrastructure
+    - renovation
+    - repair work
+
+  exclude_keywords:
+    - highway
+    - road construction
+    - bridge construction
+
+  search_fields:
+    - tender_title
+    - work_description
+    - category
+    - organization
+
+  matching:
+    case_sensitive: false
+    partial_match: true
+
+  minimum_matches: 1

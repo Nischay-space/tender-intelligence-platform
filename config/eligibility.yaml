@@ -1,0 +1,30 @@
+eligibility:
+  enabled: true
+
+  rules:
+
+    - name: minimum_tender_value
+      field: estimated_value
+      operator: gte
+      value: 1000000
+      required: true
+
+    - name: allowed_category
+      field: category
+      operator: in
+      values:
+        - Works
+      required: true
+
+    - name: allowed_procurement_type
+      field: procurement_type
+      operator: in
+      values:
+        - Works
+      required: false
+
+    - name: tender_status
+      field: status
+      operator: equals
+      value: Open
+      required: true
