@@ -34,3 +34,5 @@ class Tender(BaseModel):
     form_of_contract: str | None = None
     payment_mode: str | None = None
     work_description: str | None = None
+
+   

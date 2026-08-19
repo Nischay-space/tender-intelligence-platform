@@ -6,6 +6,10 @@ from sqlalchemy import engine_from_config, pool
 from tender_intelligence_platform.config.settings import settings
 from tender_intelligence_platform.database.base import Base
 from tender_intelligence_platform.database.models.tender import TenderORM
+from tender_intelligence_platform.database.models.tender_evaluation import (
+    TenderEvaluationORM,
+)
+
 
 
 config = context.config

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from sqlalchemy import Boolean, DateTime, Float, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from tender_intelligence_platform.database.base import Base
 
@@ -149,3 +149,9 @@ updated_at: Mapped[datetime] = mapped_column(
     onupdate=lambda: datetime.now(timezone.utc),
     nullable=False,
 )
+evaluation: Mapped["TenderEvaluationORM | None"] = relationship(
+        "TenderEvaluationORM",
+        back_populates="tender",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
