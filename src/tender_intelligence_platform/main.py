@@ -2,6 +2,7 @@ from tender_intelligence_platform.clients.http_client import HTTPClient
 from tender_intelligence_platform.config.settings import settings
 from tender_intelligence_platform.core.logging import configure_logging
 from tender_intelligence_platform.database.connection import SessionLocal
+from tender_intelligence_platform.engines import eligibility_engine, keyword_engine
 from tender_intelligence_platform.repositories.tender_repository import (
     TenderRepository,
 )
@@ -28,6 +29,8 @@ def ingest_once():
             scraper,
             repository,
             session,
+            keyword_engine,
+            eligibility_engine,
         )
 
         try:
