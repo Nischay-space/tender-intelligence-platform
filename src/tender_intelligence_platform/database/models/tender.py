@@ -1,8 +1,15 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Boolean, DateTime, Float, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from tender_intelligence_platform.database.base import Base
+
+if TYPE_CHECKING:
+    from tender_intelligence_platform.database.models.tender_evaluation import (
+        TenderEvaluationORM,
+    )
 
 
 class TenderORM(Base):
@@ -143,15 +150,16 @@ class TenderORM(Base):
     nullable=False,
 )
 
-updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
     DateTime(timezone=True),
     default=lambda: datetime.now(timezone.utc),
     onupdate=lambda: datetime.now(timezone.utc),
     nullable=False,
 )
-evaluation: Mapped["TenderEvaluationORM | None"] = relationship(
-        "TenderEvaluationORM",
-        back_populates="tender",
-        uselist=False,
-        cascade="all, delete-orphan",
-    )
+
+    evaluation: Mapped["TenderEvaluationORM | None"] = relationship(
+    "TenderEvaluationORM",
+    back_populates="tender",
+    uselist=False,
+    cascade="all, delete-orphan",
+)

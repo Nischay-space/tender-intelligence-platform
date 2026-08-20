@@ -2,15 +2,12 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from tender_intelligence_platform.engines.eligibility_engine import (
-    EligibilityEngine,
-)
-from tender_intelligence_platform.engines.keyword_engine import (
-    KeywordEngine,
-)
 from tender_intelligence_platform.models.ingestion_result import (
     IngestionFailure,
     IngestionResult,
+)
+from tender_intelligence_platform.repositories.tender_evaluation_repository import (
+    TenderEvaluationRepository,
 )
 from tender_intelligence_platform.repositories.tender_repository import (
     TenderRepository,
@@ -18,32 +15,39 @@ from tender_intelligence_platform.repositories.tender_repository import (
 from tender_intelligence_platform.scrapers.cppp_scraper import (
     CPPPScraper,
 )
+from tender_intelligence_platform.services.tender_evaluation_service import (
+    TenderEvaluationService,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
 class TenderIngestionService:
-    """Orchestrates tender scraping, filtering, eligibility, and persistence."""
+    """Orchestrates tender scraping, evaluation, and persistence."""
 
     def __init__(
         self,
         scraper: CPPPScraper,
         repository: TenderRepository,
+        evaluation_repository: TenderEvaluationRepository,
+        evaluation_service: TenderEvaluationService,
         session: Session,
-        keyword_engine: KeywordEngine,
-        eligibility_engine: EligibilityEngine,
     ):
         self._scraper = scraper
         self._repository = repository
+        self._evaluation_repository = evaluation_repository
+        self._evaluation_service = evaluation_service
         self._session = session
-        self._keyword_engine = keyword_engine
-        self._eligibility_engine = eligibility_engine
 
     def ingest(self) -> IngestionResult:
-        """Scrape, filter, evaluate eligibility, persist, and report."""
+        """
+        Scrape, evaluate, persist, and report tender ingestion.
+        """
 
-        logger.info("Tender ingestion started")
+        logger.info(
+            "Tender ingestion started"
+        )
 
         links = self._scraper.scrape_homepage()
 
@@ -59,65 +63,62 @@ class TenderIngestionService:
         for link in links:
             try:
                 with self._session.begin_nested():
-                    tender = self._scraper.scrape_detail(link)
 
-                    # -------------------------------------------------
-                    # Stage 1: Keyword relevance filtering
-                    # -------------------------------------------------
+                    # ---------------------------------------------
+                    # Stage 1: Scrape tender detail
+                    # ---------------------------------------------
 
-                    keyword_result = (
-                        self._keyword_engine.evaluate(
+                    tender = self._scraper.scrape_detail(
+                        link
+                    )
+
+                    # ---------------------------------------------
+                    # Stage 2: Evaluate tender
+                    # ---------------------------------------------
+
+                    evaluation = (
+                        self._evaluation_service.evaluate(
                             tender
                         )
                     )
 
-                    if not keyword_result.is_relevant:
-                        logger.info(
-                            "Tender filtered by keyword engine: %s | reasons=%s",
-                            tender.tender_id,
-                            keyword_result.reasons,
-                        )
-                        continue
-
-                    # -------------------------------------------------
-                    # Stage 2: Eligibility evaluation
-                    # -------------------------------------------------
-
-                    eligibility_result = (
-                        self._eligibility_engine.evaluate(
-                            tender
-                        )
+                    logger.info(
+                        "Tender evaluated: %s | status=%s",
+                        tender.tender_id,
+                        evaluation.status,
                     )
 
-                    if eligibility_result.status != "ELIGIBLE":
-                        logger.info(
-                            "Tender rejected by eligibility engine: "
-                            "%s | status=%s | reasons=%s",
-                            tender.tender_id,
-                            eligibility_result.status,
-                            eligibility_result.reasons,
-                        )
-                        continue
+                    # ---------------------------------------------
+                    # Stage 3: Persist tender
+                    # ---------------------------------------------
 
-                    # -------------------------------------------------
-                    # Stage 3: Persist eligible tender
-                    # -------------------------------------------------
-
-                    self._repository.upsert(
+                    tender_orm = self._repository.upsert(
                         tender
+                    )
+
+                    # ---------------------------------------------
+                    # Stage 4: Persist evaluation
+                    # ---------------------------------------------
+
+                    self._evaluation_repository.upsert(
+                        tender_orm.id,
+                        evaluation,
                     )
 
                 result.tenders.append(
                     tender
                 )
+
                 result.successful += 1
 
                 logger.info(
-                    "Tender processed successfully: %s",
+                    "Tender processed successfully: %s | status=%s",
                     tender.tender_id,
+                    evaluation.status,
                 )
 
             except Exception as exc:
+
                 result.failed += 1
 
                 result.failures.append(
