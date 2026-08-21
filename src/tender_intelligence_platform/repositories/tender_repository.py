@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from time import sleep
 
 from tender_intelligence_platform.database.models.tender import TenderORM
 from tender_intelligence_platform.models.tender import Tender
@@ -74,3 +75,4 @@ class TenderRepository:
             existing,
             tender,
         )
+    

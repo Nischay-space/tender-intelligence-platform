@@ -1,5 +1,6 @@
 from datetime import date
 from uuid import uuid4
+from time import sleep
 
 from tender_intelligence_platform.database.connection import SessionLocal
 from tender_intelligence_platform.models.tender import Tender
@@ -153,3 +154,38 @@ def test_upsert_updates_existing_tender():
             "Updated Through Upsert"
         )
         assert found.estimated_value == 500000.0
+
+
+
+def test_update_tender_changes_updated_at():
+    tender = make_tender()
+
+    with SessionLocal() as session:
+        repository = TenderRepository(session)
+
+        created = repository.create(tender)
+        session.commit()
+
+        original_updated_at = created.updated_at
+
+        sleep(0.01)
+
+        updated_tender = tender.model_copy(
+            update={
+                "tender_title": "Timestamp Updated Tender",
+            }
+        )
+
+        repository.update(
+            created,
+            updated_tender,
+        )
+
+        session.commit()
+
+        refreshed = repository.get_by_tender_id(
+            tender.tender_id
+        )
+
+        assert refreshed is not None
+        assert refreshed.updated_at > original_updated_at

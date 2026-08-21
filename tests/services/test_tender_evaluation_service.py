@@ -12,74 +12,77 @@ from tender_intelligence_platform.services.tender_evaluation_service import (
 )
 
 
-def create_tender() -> Tender:
-    """Create a minimal valid tender for testing."""
-
+def make_tender() -> Tender:
     return Tender(
-        tender_id="TEST-001",
-        tender_title="Construction of office building",
-        organization="Test Organization",
-        tender_reference_number="TEST-REF-001",
-        tender_url="https://example.com/tender/1",
-        published_date=None,
-        bid_submission_start_date=None,
-        bid_submission_end_date=None,
-        opening_date=None,
-        estimated_value=5_000_000,
-        earnest_money_deposit=None,
-        tender_fee=None,
-        currency="INR",
-        tender_type="Open Tender",
+        tender_id="TEST-EVAL-001",
+        tender_title="Test Construction Tender",
+        tender_url="https://example.com/tender",
+        estimated_value=1000000.0,
         category="Works",
         procurement_type="Works",
-        state=None,
-        city=None,
-        work_location=None,
         status="Open",
-        withdrawal_allowed=True,
-        form_of_contract=None,
-        payment_mode=None,
-        work_description="Civil works and renovation",
+        work_description="Construction of office building",
     )
 
 
-def create_service(
+def make_keyword_result(
+    is_relevant: bool,
+) -> FilterResult:
+    return FilterResult(
+        is_relevant=is_relevant,
+        matched_keywords=(
+            ["construction"]
+            if is_relevant
+            else []
+        ),
+        reasons=[
+            "Keyword evaluation completed"
+        ],
+    )
+
+
+def make_eligibility_result(
+    status: str,
+) -> EligibilityResult:
+    return EligibilityResult(
+        status=status,
+        reasons=[
+            "Eligibility evaluation completed"
+        ],
+    )
+
+
+def make_service(
     keyword_result: FilterResult,
     eligibility_result: EligibilityResult,
 ) -> TenderEvaluationService:
-    """Create evaluation service with mocked engines."""
 
     keyword_engine = Mock()
+    eligibility_engine = Mock()
 
     keyword_engine.evaluate.return_value = (
         keyword_result
     )
-
-    eligibility_engine = Mock()
 
     eligibility_engine.evaluate.return_value = (
         eligibility_result
     )
 
     return TenderEvaluationService(
-        keyword_engine,
-        eligibility_engine,
+        keyword_engine=keyword_engine,
+        eligibility_engine=eligibility_engine,
     )
 
 
-def test_qualified_tender():
-    service = create_service(
-        FilterResult(
-            is_relevant=True,
-            matched_keywords=["construction"],
-        ),
-        EligibilityResult(
-            status="ELIGIBLE",
-        ),
+def test_relevant_and_eligible_is_qualified():
+
+    service = make_service(
+        make_keyword_result(True),
+        make_eligibility_result("ELIGIBLE"),
     )
 
     result = service.evaluate(
-        create_tender()
+        make_tender()
     )
 
     assert result.status == "QUALIFIED"
@@ -87,59 +90,62 @@ def test_qualified_tender():
 
 
 def test_irrelevant_tender_is_filtered_out():
-    service = create_service(
-        FilterResult(
-            is_relevant=False,
-            reasons=[
-                "No configured keywords matched"
-            ],
-        ),
-        EligibilityResult(
-            status="ELIGIBLE",
-        ),
+
+    service = make_service(
+        make_keyword_result(False),
+        make_eligibility_result("ELIGIBLE"),
     )
 
     result = service.evaluate(
-        create_tender()
+        make_tender()
     )
 
     assert result.status == "FILTERED_OUT"
     assert result.is_qualified is False
 
 
-def test_relevant_but_ineligible_tender():
-    service = create_service(
-        FilterResult(
-            is_relevant=True,
-            matched_keywords=["construction"],
-        ),
-        EligibilityResult(
-            status="NOT_ELIGIBLE",
-        ),
+def test_relevant_but_not_eligible():
+
+    service = make_service(
+        make_keyword_result(True),
+        make_eligibility_result("NOT_ELIGIBLE"),
     )
 
     result = service.evaluate(
-        create_tender()
+        make_tender()
     )
 
     assert result.status == "NOT_ELIGIBLE"
     assert result.is_qualified is False
 
 
-def test_relevant_tender_with_unknown_eligibility():
-    service = create_service(
-        FilterResult(
-            is_relevant=True,
-            matched_keywords=["construction"],
-        ),
-        EligibilityResult(
-            status="UNKNOWN",
-        ),
+def test_relevant_but_unknown_requires_review():
+
+    service = make_service(
+        make_keyword_result(True),
+        make_eligibility_result("UNKNOWN"),
     )
 
     result = service.evaluate(
-        create_tender()
+        make_tender()
     )
 
     assert result.status == "REVIEW_REQUIRED"
     assert result.is_qualified is False
+
+
+def test_evaluation_reasons_include_final_status():
+
+    service = make_service(
+        make_keyword_result(True),
+        make_eligibility_result("ELIGIBLE"),
+    )
+
+    result = service.evaluate(
+        make_tender()
+    )
+
+    assert (
+        "Final evaluation status: QUALIFIED"
+        in result.reasons
+    )
