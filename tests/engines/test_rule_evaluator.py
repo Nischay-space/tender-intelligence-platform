@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from types import SimpleNamespace
 
 import pytest
 
@@ -8,13 +8,6 @@ from tender_intelligence_platform.engines.rule_evaluator import (
 from tender_intelligence_platform.models.rule import Rule
 
 
-@dataclass
-class SampleTender:
-    estimated_value: float
-    category: str
-    status: str
-
-
 @pytest.fixture
 def evaluator():
     return RuleEvaluator()
@@ -22,14 +15,17 @@ def evaluator():
 
 @pytest.fixture
 def tender():
-    return SampleTender(
-        estimated_value=5_000_000,
+    return SimpleNamespace(
+        estimated_value=500000,
         category="Works",
+        procurement_type="Works",
         status="Open",
+        title="Construction of Office Building",
+        state="Delhi",
     )
 
 
-def test_equals(evaluator, tender):
+def test_equals_operator(evaluator, tender):
     rule = Rule(
         name="category_check",
         field="category",
@@ -37,15 +33,13 @@ def test_equals(evaluator, tender):
         value="Works",
     )
 
-    result = evaluator.evaluate(
-        rule,
-        tender,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
+    assert result.rule_name == "category_check"
 
 
-def test_not_equals(evaluator, tender):
+def test_not_equals_operator(evaluator, tender):
     rule = Rule(
         name="category_check",
         field="category",
@@ -53,201 +47,194 @@ def test_not_equals(evaluator, tender):
         value="Services",
     )
 
-    result = evaluator.evaluate(
-        rule,
-        tender,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
 
 
-def test_greater_than(evaluator, tender):
+def test_greater_than_operator(evaluator, tender):
     rule = Rule(
-        name="value_check",
+        name="minimum_value",
         field="estimated_value",
         operator="gt",
-        value=1_000_000,
+        value=100000,
     )
 
-    result = evaluator.evaluate(
-        rule,
-        tender,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
 
 
-def test_greater_than_or_equal(evaluator, tender):
+def test_greater_than_or_equal_operator(evaluator, tender):
     rule = Rule(
-        name="value_check",
+        name="minimum_value",
         field="estimated_value",
         operator="gte",
-        value=5_000_000,
+        value=500000,
     )
 
-    result = evaluator.evaluate(
-        rule,
-        tender,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
 
 
-def test_less_than(evaluator, tender):
+def test_less_than_operator(evaluator, tender):
     rule = Rule(
-        name="value_check",
+        name="value_limit",
         field="estimated_value",
         operator="lt",
-        value=10_000_000,
+        value=1000000,
     )
 
-    result = evaluator.evaluate(
-        rule,
-        tender,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
 
 
-def test_less_than_or_equal(evaluator, tender):
+def test_less_than_or_equal_operator(evaluator, tender):
     rule = Rule(
-        name="value_check",
+        name="value_limit",
         field="estimated_value",
         operator="lte",
-        value=5_000_000,
+        value=500000,
     )
 
-    result = evaluator.evaluate(
-        rule,
-        tender,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
 
 
-def test_in(evaluator, tender):
+def test_in_operator(evaluator, tender):
     rule = Rule(
-        name="category_check",
+        name="allowed_category",
         field="category",
         operator="in",
-        values=[
-            "Works",
-            "Services",
-        ],
+        values=["Works", "Goods"],
     )
 
-    result = evaluator.evaluate(
-        rule,
-        tender,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
 
 
-def test_not_in(evaluator, tender):
+def test_not_in_operator(evaluator, tender):
     rule = Rule(
-        name="category_check",
+        name="blocked_category",
         field="category",
         operator="not_in",
-        values=[
-            "Goods",
-            "Consultancy",
-        ],
+        values=["Services", "Consultancy"],
     )
 
-    result = evaluator.evaluate(
-        rule,
-        tender,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
 
 
-def test_contains(evaluator):
-    obj = {
-        "description": "civil construction work"
-    }
-
+def test_contains_operator(evaluator, tender):
     rule = Rule(
-        name="description_check",
-        field="description",
+        name="title_contains",
+        field="title",
         operator="contains",
-        value="construction",
+        value="Construction",
     )
 
-    result = evaluator.evaluate(
-        rule,
-        obj,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
 
 
-def test_not_contains(evaluator):
-    obj = {
-        "description": "civil construction work"
-    }
-
+def test_not_contains_operator(evaluator, tender):
     rule = Rule(
-        name="description_check",
-        field="description",
+        name="title_check",
+        field="title",
         operator="not_contains",
-        value="highway",
+        value="Bridge",
     )
 
-    result = evaluator.evaluate(
-        rule,
-        obj,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
 
 
-def test_exists(evaluator, tender):
+def test_exists_operator(evaluator, tender):
     rule = Rule(
-        name="status_exists",
-        field="status",
+        name="state_exists",
+        field="state",
         operator="exists",
     )
 
-    result = evaluator.evaluate(
-        rule,
-        tender,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is True
 
 
-def test_missing_field_fails_exists(evaluator):
-    obj = {}
-
+def test_exists_returns_false_for_missing_value(evaluator, tender):
     rule = Rule(
-        name="location_exists",
-        field="location",
+        name="unknown_field",
+        field="nonexistent_field",
         operator="exists",
     )
 
-    result = evaluator.evaluate(
-        rule,
-        obj,
-    )
+    result = evaluator.evaluate(rule, tender)
 
     assert result.passed is False
 
 
-def test_unsupported_operator_is_rejected(
-    evaluator,
-    tender,
-):
+def test_missing_field_fails_comparison(evaluator, tender):
     rule = Rule(
-        name="invalid_rule",
-        field="status",
-        operator="between",
-        value="Open",
+        name="missing_value",
+        field="nonexistent_field",
+        operator="gte",
+        value=100,
     )
 
-    with pytest.raises(ValueError):
-        evaluator.evaluate(
-            rule,
-            tender,
-        )
+    result = evaluator.evaluate(rule, tender)
+
+    assert result.passed is False
+
+
+def test_invalid_operator_raises_error(evaluator, tender):
+    rule = Rule(
+        name="invalid_rule",
+        field="category",
+        operator="invalid_operator",
+        value="Works",
+    )
+
+    with pytest.raises(ValueError, match="Unsupported operator"):
+        evaluator.evaluate(rule, tender)
+
+
+def test_nested_field_lookup(evaluator):
+    tender = {
+        "organization": {
+            "name": "Test Organization",
+        }
+    }
+
+    rule = Rule(
+        name="organization_check",
+        field="organization.name",
+        operator="equals",
+        value="Test Organization",
+    )
+
+    result = evaluator.evaluate(rule, tender)
+
+    assert result.passed is True
+
+
+def test_failed_rule_contains_useful_reason(evaluator, tender):
+    rule = Rule(
+        name="minimum_value",
+        field="estimated_value",
+        operator="gte",
+        value=1000000,
+    )
+
+    result = evaluator.evaluate(rule, tender)
+
+    assert result.passed is False
+    assert "minimum_value" in result.reason
+    assert "estimated_value" in result.reason
+    assert "500000" in result.reason

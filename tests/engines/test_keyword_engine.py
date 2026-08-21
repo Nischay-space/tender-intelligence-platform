@@ -6,95 +6,251 @@ from tender_intelligence_platform.engines.keyword_engine import (
 from tender_intelligence_platform.models.tender import Tender
 
 
-CONFIG_PATH = Path(
-    "config/filters.yaml"
-)
-
-
-def create_tender(
-    title: str,
-    description: str,
+def make_tender(
+    title: str = "Construction of Government Building",
 ) -> Tender:
-    """Create a minimal tender for testing."""
-
     return Tender(
-        tender_id="TEST-001",
+        tender_id="TEST-KEYWORD-001",
         tender_title=title,
-        organization="Test Organization",
-        tender_reference_number="REF-001",
         tender_url="https://example.com/tender",
-        published_date=None,
-        bid_submission_start_date=None,
-        bid_submission_end_date=None,
-        opening_date=None,
-        estimated_value=None,
-        earnest_money_deposit=None,
-        tender_fee=None,
-        currency="INR",
-        tender_type="Open Tender",
+        organization="Test Organization",
         category="Works",
         procurement_type="Works",
-        state=None,
-        city=None,
-        work_location=None,
         status="Open",
-        withdrawal_allowed=True,
-        form_of_contract=None,
-        payment_mode=None,
-        work_description=description,
+        work_description="Government construction work",
     )
 
 
-def test_keyword_engine_matches_relevant_tender():
-    engine = KeywordEngine(
-        CONFIG_PATH
+def create_config(
+    tmp_path: Path,
+    *,
+    include_keywords=None,
+    exclude_keywords=None,
+    minimum_matches=1,
+    enabled=True,
+    case_sensitive=False,
+    partial_match=True,
+) -> Path:
+
+    include_keywords = (
+        include_keywords
+        if include_keywords is not None
+        else ["construction"]
     )
 
-    tender = create_tender(
-        title="Construction of office building",
-        description="Civil works and renovation",
+    exclude_keywords = (
+        exclude_keywords
+        if exclude_keywords is not None
+        else []
     )
+
+    config = f"""
+keyword_filter:
+  enabled: {str(enabled).lower()}
+
+  search_fields:
+    - tender_title
+    - work_description
+
+  include_keywords:
+"""
+
+    for keyword in include_keywords:
+        config += f'    - "{keyword}"\n'
+
+    config += """
+  exclude_keywords:
+"""
+
+    for keyword in exclude_keywords:
+        config += f'    - "{keyword}"\n'
+
+    config += f"""
+  minimum_matches: {minimum_matches}
+
+  matching:
+    case_sensitive: {str(case_sensitive).lower()}
+    partial_match: {str(partial_match).lower()}
+"""
+
+    config_path = tmp_path / "filters.yaml"
+    config_path.write_text(
+        config,
+        encoding="utf-8",
+    )
+
+    return config_path
+
+
+def test_matching_keyword_is_relevant(tmp_path):
+
+    config_path = create_config(
+        tmp_path,
+        include_keywords=["construction"],
+    )
+
+    engine = KeywordEngine(config_path)
+
+    result = engine.evaluate(
+        make_tender()
+    )
+
+    assert result.is_relevant is True
+    assert result.matched_keywords == [
+        "construction"
+    ]
+
+
+def test_no_matching_keyword_is_filtered_out(tmp_path):
+
+    config_path = create_config(
+        tmp_path,
+        include_keywords=["software"],
+    )
+
+    engine = KeywordEngine(config_path)
+
+    result = engine.evaluate(
+        make_tender()
+    )
+
+    assert result.is_relevant is False
+    assert result.matched_keywords == []
+
+
+def test_excluded_keyword_filters_tender(tmp_path):
+
+    config_path = create_config(
+        tmp_path,
+        include_keywords=["construction"],
+        exclude_keywords=["private"],
+    )
+
+    tender = make_tender(
+        "Construction of Private Building"
+    )
+
+    engine = KeywordEngine(config_path)
+
+    result = engine.evaluate(tender)
+
+    assert result.is_relevant is False
+    assert result.matched_keywords == [
+        "construction"
+    ]
+    assert result.excluded_keywords == [
+        "private"
+    ]
+
+
+def test_minimum_matches_is_enforced(tmp_path):
+
+    config_path = create_config(
+        tmp_path,
+        include_keywords=[
+            "construction",
+            "government",
+        ],
+        minimum_matches=2,
+    )
+
+    tender = make_tender(
+        "Construction of Government Building"
+    )
+
+    engine = KeywordEngine(config_path)
 
     result = engine.evaluate(tender)
 
     assert result.is_relevant is True
+    assert set(result.matched_keywords) == {
+        "construction",
+        "government",
+    }
 
-    assert "construction" in (
-        result.matched_keywords
+
+def test_minimum_matches_fails_when_not_enough_keywords(
+    tmp_path,
+):
+
+    config_path = create_config(
+        tmp_path,
+        include_keywords=[
+            "construction",
+            "software",
+        ],
+        minimum_matches=2,
     )
 
+    engine = KeywordEngine(config_path)
 
-def test_keyword_engine_rejects_excluded_tender():
-    engine = KeywordEngine(
-        CONFIG_PATH
+    result = engine.evaluate(
+        make_tender()
     )
 
-    tender = create_tender(
-        title="Highway construction work",
-        description="Road construction project",
+    assert result.is_relevant is False
+    assert result.matched_keywords == [
+        "construction"
+    ]
+
+
+def test_matching_is_case_insensitive_by_default(
+    tmp_path,
+):
+
+    config_path = create_config(
+        tmp_path,
+        include_keywords=["CONSTRUCTION"],
     )
 
-    result = engine.evaluate(tender)
+    engine = KeywordEngine(config_path)
+
+    result = engine.evaluate(
+        make_tender()
+    )
+
+    assert result.is_relevant is True
+    assert result.matched_keywords == [
+        "CONSTRUCTION"
+    ]
+
+
+def test_exact_word_matching(tmp_path):
+
+    config_path = create_config(
+        tmp_path,
+        include_keywords=["construct"],
+        partial_match=False,
+    )
+
+    engine = KeywordEngine(config_path)
+
+    result = engine.evaluate(
+        make_tender(
+            "Construction of Government Building"
+        )
+    )
 
     assert result.is_relevant is False
 
-    assert len(
-        result.excluded_keywords
-    ) > 0
 
+def test_disabled_keyword_filter_accepts_tender(
+    tmp_path,
+):
 
-def test_keyword_engine_rejects_without_matches():
-    engine = KeywordEngine(
-        CONFIG_PATH
+    config_path = create_config(
+        tmp_path,
+        include_keywords=["something_that_does_not_exist"],
+        enabled=False,
     )
 
-    tender = create_tender(
-        title="Supply of office stationery",
-        description="Supply of paper and files",
+    engine = KeywordEngine(config_path)
+
+    result = engine.evaluate(
+        make_tender()
     )
 
-    result = engine.evaluate(tender)
-
-    assert result.is_relevant is False
-
-    assert result.matched_keywords == []
+    assert result.is_relevant is True
+    assert result.reasons == [
+        "Keyword filtering is disabled"
+    ]

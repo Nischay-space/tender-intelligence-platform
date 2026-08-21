@@ -64,14 +64,12 @@ class KeywordEngine:
         )
 
         include_keywords = self._settings.get(
-            "include_keywords",
-            [],
-        )
+    "include_keywords"
+) or []
 
         exclude_keywords = self._settings.get(
-            "exclude_keywords",
-            [],
-        )
+    "exclude_keywords"
+) or []
 
         matched_keywords = self._find_matches(
             text,

@@ -76,3 +76,16 @@ class TenderRepository:
             tender,
         )
     
+    def get_all(
+        self,
+    ) -> list[TenderORM]:
+        """Return all tenders."""
+
+        statement = select(TenderORM).order_by(
+            TenderORM.id.desc()
+        )
+
+        return list(
+            self._session.scalars(statement).all()
+        )
+        

@@ -1,24 +1,23 @@
 from fastapi import FastAPI
 
-from tender_intelligence_platform.api.routes.health import (
-    router as health_router,
+from tender_intelligence_platform.api.routes.tenders import (
+    router as tender_router,
 )
 
 
-def create_app() -> FastAPI:
-    """Create and configure the FastAPI application."""
-
-    app = FastAPI(
-        title="Tender Intelligence Platform",
-        version="0.1.0",
-    )
-
-    app.include_router(
-        health_router,
-        prefix="/api/v1",
-    )
-
-    return app
+app = FastAPI(
+    title="Tender Intelligence Platform",
+    description="API for government tender intelligence and evaluation.",
+    version="0.1.0",
+)
 
 
-app = create_app()
+app.include_router(tender_router)
+
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "ok",
+        "service": "tender-intelligence-platform",
+    }
