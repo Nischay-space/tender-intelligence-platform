@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from tender_intelligence_platform.api.schemas.tender import (
     TenderResponse,
@@ -8,6 +8,12 @@ from tender_intelligence_platform.database.connection import (
 )
 from tender_intelligence_platform.repositories.tender_repository import (
     TenderRepository,
+)
+from tender_intelligence_platform.api.schemas.evaluation import (
+    TenderEvaluationResponse,
+)
+from tender_intelligence_platform.repositories.tender_evaluation_repository import (
+    TenderEvaluationRepository,
 )
 
 
@@ -27,6 +33,75 @@ def get_tenders():
     with SessionLocal() as session:
         repository = TenderRepository(session)
 
-        tenders = repository.get_all()
+        return repository.get_all()
 
-        return tenders
+
+@router.get(
+    "/{tender_id}/evaluation",
+    response_model=TenderEvaluationResponse,
+)
+def get_tender_evaluation(
+    tender_id: str,
+):
+    """Return the evaluation for a tender."""
+
+    with SessionLocal() as session:
+        tender_repository = TenderRepository(
+            session
+        )
+
+        tender = tender_repository.get_by_tender_id(
+            tender_id
+        )
+
+        if tender is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Tender '{tender_id}' not found",
+            )
+
+        evaluation_repository = TenderEvaluationRepository(
+            session
+        )
+
+        evaluation = evaluation_repository.get_by_tender_id(
+            tender.id
+        )
+
+        if evaluation is None:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Evaluation for tender "
+                    f"'{tender_id}' not found"
+                ),
+            )
+
+        return evaluation
+
+
+
+
+
+@router.get(
+    "/{tender_id}",
+    response_model=TenderResponse,
+)
+def get_tender(tender_id: str):
+    """Return a single tender by its business identifier."""
+
+    with SessionLocal() as session:
+        repository = TenderRepository(session)
+
+        tender = repository.get_by_tender_id(
+            tender_id
+        )
+
+        if tender is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Tender '{tender_id}' not found",
+            )
+
+        return tender
+
