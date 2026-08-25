@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict
 
 
 class TenderEvaluationResponse(BaseModel):
@@ -14,6 +16,10 @@ class TenderEvaluationResponse(BaseModel):
     unknown_rules: list[dict]
 
     reasons: list[str]
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 
 class TenderResponse(BaseModel):
@@ -50,7 +56,11 @@ class TenderResponse(BaseModel):
     payment_mode: str | None = None
     work_description: str | None = None
 
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
     evaluation: TenderEvaluationResponse | None = None
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from tender_intelligence_platform.api.schemas.tender import (
     TenderResponse,
@@ -27,13 +27,28 @@ router = APIRouter(
     "",
     response_model=list[TenderResponse],
 )
-def get_tenders():
-    """Return all stored tenders."""
+def get_tenders(
+    skip: int = Query(
+        0,
+        ge=0,
+        description="Number of tenders to skip",
+    ),
+    limit: int = Query(
+        50,
+        ge=1,
+        le=100,
+        description="Maximum number of tenders to return",
+    ),
+):
+    """Return stored tenders with pagination."""
 
     with SessionLocal() as session:
         repository = TenderRepository(session)
 
-        return repository.get_all()
+        return repository.get_all(
+            skip=skip,
+            limit=limit,
+        )   
 
 
 @router.get(

@@ -1,12 +1,16 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class RuleResultResponse(BaseModel):
     rule_name: str
     passed: bool
     reason: str
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 
 class TenderEvaluationResponse(BaseModel):
@@ -27,3 +31,7 @@ class TenderEvaluationResponse(BaseModel):
     reasons: list[str]
 
     evaluated_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )

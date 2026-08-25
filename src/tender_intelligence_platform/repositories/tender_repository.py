@@ -1,9 +1,7 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from tender_intelligence_platform.database.models.tender import TenderORM
 from tender_intelligence_platform.models.tender import Tender
-
-
 class TenderRepository:
     """Repository for tender persistence operations."""
 
@@ -16,8 +14,14 @@ class TenderRepository:
     ) -> TenderORM | None:
         """Return a tender by its business identifier."""
 
-        statement = select(TenderORM).where(
-            TenderORM.tender_id == tender_id
+        statement = (
+            select(TenderORM)
+            .options(
+                selectinload(TenderORM.evaluation)
+            )
+            .where(
+                TenderORM.tender_id == tender_id
+            )
         )
 
         return self._session.scalar(statement)
@@ -76,11 +80,19 @@ class TenderRepository:
     
     def get_all(
         self,
+        skip: int = 0,
+        limit: int = 50,
     ) -> list[TenderORM]:
-        """Return all tenders."""
+        """Return tenders with pagination and evaluations."""
 
-        statement = select(TenderORM).order_by(
-            TenderORM.id.desc()
+        statement = (
+            select(TenderORM)
+            .options(
+                selectinload(TenderORM.evaluation)
+            )
+            .order_by(TenderORM.id.desc())
+            .offset(skip)
+            .limit(limit)
         )
 
         return list(
