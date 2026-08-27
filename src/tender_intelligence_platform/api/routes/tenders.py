@@ -1,19 +1,25 @@
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException, Query
 
+from tender_intelligence_platform.api.schemas.evaluation import (
+    TenderEvaluationResponse,
+)
+from tender_intelligence_platform.api.schemas.stats import (
+    TenderStatsResponse,
+)
 from tender_intelligence_platform.api.schemas.tender import (
+    TenderListResponse,
     TenderResponse,
 )
 from tender_intelligence_platform.database.connection import (
     SessionLocal,
 )
-from tender_intelligence_platform.repositories.tender_repository import (
-    TenderRepository,
-)
-from tender_intelligence_platform.api.schemas.evaluation import (
-    TenderEvaluationResponse,
-)
 from tender_intelligence_platform.repositories.tender_evaluation_repository import (
     TenderEvaluationRepository,
+)
+from tender_intelligence_platform.repositories.tender_repository import (
+    TenderRepository,
 )
 
 
@@ -23,9 +29,19 @@ router = APIRouter(
 )
 
 
+# Keep in sync with SORTABLE_FIELDS in repositories/tender_repository.py
+SortableField = Literal[
+    "id",
+    "created_at",
+    "updated_at",
+    "estimated_value",
+    "bid_submission_end_date",
+]
+
+
 @router.get(
     "",
-    response_model=list[TenderResponse],
+    response_model=TenderListResponse,
 )
 def get_tenders(
     skip: int = Query(
@@ -39,16 +55,85 @@ def get_tenders(
         le=100,
         description="Maximum number of tenders to return",
     ),
+    final_status: str | None = Query(
+        None,
+        description=(
+            "Filter by evaluation final status, e.g. "
+            "QUALIFIED, FILTERED_OUT, NOT_ELIGIBLE, REVIEW_REQUIRED"
+        ),
+    ),
+    category: str | None = Query(
+        None,
+        description="Filter by tender category",
+    ),
+    state: str | None = Query(
+        None,
+        description="Filter by tender state",
+    ),
+    status: str | None = Query(
+        None,
+        description="Filter by tender status, e.g. Open",
+    ),
+    sort_by: SortableField = Query(
+        "id",
+        description="Field to sort by",
+    ),
+    sort_order: Literal["asc", "desc"] = Query(
+        "desc",
+        description="Sort direction",
+    ),
 ):
-    """Return stored tenders with pagination."""
+    """Return stored tenders with pagination, filtering, and sorting."""
 
     with SessionLocal() as session:
         repository = TenderRepository(session)
 
-        return repository.get_all(
+        filters = dict(
+            final_status=final_status,
+            category=category,
+            state=state,
+            status=status,
+        )
+
+        items = repository.get_all(
             skip=skip,
             limit=limit,
-        )   
+            sort_by=sort_by,
+            sort_order=sort_order,
+            **filters,
+        )
+
+        total = repository.count(**filters)
+
+        return TenderListResponse(
+            items=items,
+            total=total,
+            skip=skip,
+            limit=limit,
+        )
+
+
+@router.get(
+    "/stats",
+    response_model=TenderStatsResponse,
+)
+def get_tender_stats():
+    """Return aggregate tender counts by evaluation outcome, for dashboards."""
+
+    with SessionLocal() as session:
+        repository = TenderRepository(session)
+
+        counts = repository.get_status_counts()
+        total = repository.count()
+
+        return TenderStatsResponse(
+            total=total,
+            qualified=counts.get("QUALIFIED", 0),
+            filtered_out=counts.get("FILTERED_OUT", 0),
+            not_eligible=counts.get("NOT_ELIGIBLE", 0),
+            review_required=counts.get("REVIEW_REQUIRED", 0),
+            unevaluated=counts.get(None, 0),
+        )
 
 
 @router.get(
@@ -95,9 +180,6 @@ def get_tender_evaluation(
         return evaluation
 
 
-
-
-
 @router.get(
     "/{tender_id}",
     response_model=TenderResponse,
@@ -119,4 +201,3 @@ def get_tender(tender_id: str):
             )
 
         return tender
-

@@ -49,3 +49,12 @@ class TenderResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True
     )
+
+
+class TenderListResponse(BaseModel):
+    """Paginated, filterable list of tenders."""
+
+    items: list[TenderResponse]
+    total: int
+    skip: int
+    limit: int

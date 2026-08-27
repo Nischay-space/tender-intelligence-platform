@@ -199,3 +199,28 @@ class TenderRepository:
         )
 
         return self._session.scalar(statement) or 0
+
+    def get_status_counts(self) -> dict[str | None, int]:
+        """
+        Return tender counts grouped by evaluation final_status.
+
+        Tenders with no evaluation yet are grouped under the key None,
+        via the LEFT JOIN — an INNER JOIN would silently drop them.
+        """
+
+        statement = (
+            select(
+                TenderEvaluationORM.final_status,
+                func.count(TenderORM.id),
+            )
+            .select_from(TenderORM)
+            .outerjoin(TenderORM.evaluation)
+            .group_by(TenderEvaluationORM.final_status)
+        )
+
+        rows = self._session.execute(statement).all()
+
+        return {
+            final_status: count
+            for final_status, count in rows
+        }
