@@ -2,24 +2,9 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-
-class TenderEvaluationResponse(BaseModel):
-    keyword_status: str
-    eligibility_status: str
-    final_status: str
-
-    matched_keywords: list[str]
-    excluded_keywords: list[str]
-
-    passed_rules: list[dict]
-    failed_rules: list[dict]
-    unknown_rules: list[dict]
-
-    reasons: list[str]
-
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+from tender_intelligence_platform.api.schemas.evaluation import (
+    TenderEvaluationResponse,
+)
 
 
 class TenderResponse(BaseModel):

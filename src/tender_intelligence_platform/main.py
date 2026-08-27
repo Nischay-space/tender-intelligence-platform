@@ -10,6 +10,9 @@ from tender_intelligence_platform.engines.eligibility_engine import (
 from tender_intelligence_platform.engines.keyword_engine import (
     KeywordEngine,
 )
+from tender_intelligence_platform.engines.link_prefilter import (
+    LinkPreFilter,
+)
 from tender_intelligence_platform.repositories.tender_evaluation_repository import (
     TenderEvaluationRepository,
 )
@@ -53,6 +56,14 @@ def build_keyword_engine() -> KeywordEngine:
     """Create the configured keyword engine."""
 
     return KeywordEngine(
+        config_path=KEYWORD_CONFIG_PATH,
+    )
+
+
+def build_link_prefilter() -> LinkPreFilter:
+    """Create the configured pre-download link filter."""
+
+    return LinkPreFilter(
         config_path=KEYWORD_CONFIG_PATH,
     )
 
@@ -110,12 +121,15 @@ def ingest_once():
             settings,
         )
 
+        link_prefilter = build_link_prefilter()
+
         ingestion_service = TenderIngestionService(
             scraper=scraper,
             repository=tender_repository,
             evaluation_repository=evaluation_repository,
             evaluation_service=evaluation_service,
             session=session,
+            link_prefilter=link_prefilter,
         )
 
         try:
@@ -146,6 +160,11 @@ def main():
         f"Successfully processed "
         f"{result.successful}/{result.discovered} tenders"
     )
+
+    if result.skipped:
+        print(
+            f"Skipped by pre-filter: {result.skipped}"
+        )
 
     if result.failed:
         print(

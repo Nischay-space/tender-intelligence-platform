@@ -1,8 +1,10 @@
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import func
 
 from tender_intelligence_platform.database.connection import SessionLocal
+from tender_intelligence_platform.database.models.tender import TenderORM
 from tender_intelligence_platform.models.eligibility_result import (
     EligibilityResult,
 )
@@ -20,10 +22,28 @@ from tender_intelligence_platform.models.tender import Tender
 
 @pytest.fixture
 def db_session():
-    """Provide a real database session for a single test."""
+    """Provide a real database session for a single test.
+
+    Any TenderORM rows created during the test (and their evaluations,
+    via ON DELETE CASCADE) are removed afterwards. Routes open their own
+    independent SessionLocal(), so seeded data must be committed for the
+    route to see it — a rollback here would not undo an already-committed
+    write. Explicit cleanup by primary key is the correct approach given
+    that constraint.
+    """
 
     with SessionLocal() as session:
+        watermark = (
+            session.query(func.max(TenderORM.id)).scalar() or 0
+        )
+
         yield session
+
+        session.rollback()
+        session.query(TenderORM).filter(
+            TenderORM.id > watermark
+        ).delete(synchronize_session=False)
+        session.commit()
 
 
 @pytest.fixture
