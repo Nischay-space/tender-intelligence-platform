@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Source Serif 4", Georgia, serif;
+  --font-sans: "IBM Plex Sans", -apple-system, sans-serif;
+
+  --color-ink: #1c2430;
+  --color-paper: #f6f5f1;
+  --color-slate: #5b6470;
+  --color-line: #ddddd3;
+  --color-seal: #8a6d3b;
+  --color-seal-light: #efe6d6;
+
+  --color-status-qualified: #3c6e47;
+  --color-status-qualified-bg: #e6efe8;
+  --color-status-not-eligible: #9b4a44;
+  --color-status-not-eligible-bg: #f3e6e5;
+  --color-status-review: #a67c2e;
+  --color-status-review-bg: #f4ecd9;
+  --color-status-filtered: #6b7280;
+  --color-status-filtered-bg: #ececea;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
