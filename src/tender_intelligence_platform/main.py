@@ -13,6 +13,9 @@ from tender_intelligence_platform.engines.keyword_engine import (
 from tender_intelligence_platform.engines.link_prefilter import (
     LinkPreFilter,
 )
+from tender_intelligence_platform.repositories.ingestion_run_repository import (
+    IngestionRunRepository,
+)
 from tender_intelligence_platform.repositories.tender_evaluation_repository import (
     TenderEvaluationRepository,
 )
@@ -94,7 +97,18 @@ def build_evaluation_service() -> TenderEvaluationService:
 
 
 def ingest_once():
-    """Run one complete tender ingestion cycle."""
+    """Run one complete tender ingestion cycle, recording its outcome."""
+
+    # Run tracking deliberately uses its own short-lived sessions,
+    # separate from the ingestion session below. If ingestion fails
+    # catastrophically and its session is rolled back, the run record
+    # documenting that failure must still be persisted, not undone
+    # along with it.
+    with SessionLocal() as run_session:
+        run_repository = IngestionRunRepository(run_session)
+        run = run_repository.start_run()
+        run_session.commit()
+        run_id = run.id
 
     client = HTTPClient()
 
@@ -137,10 +151,28 @@ def ingest_once():
 
             session.commit()
 
+            with SessionLocal() as run_session:
+                IngestionRunRepository(run_session).complete_run(
+                    run_id,
+                    discovered=result.discovered,
+                    successful=result.successful,
+                    failed=result.failed,
+                    skipped=result.skipped,
+                )
+                run_session.commit()
+
             return result
 
-        except Exception:
+        except Exception as exc:
             session.rollback()
+
+            with SessionLocal() as run_session:
+                IngestionRunRepository(run_session).fail_run(
+                    run_id,
+                    error=str(exc),
+                )
+                run_session.commit()
+
             raise
 
 

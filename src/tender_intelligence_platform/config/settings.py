@@ -26,14 +26,11 @@ class Settings(BaseSettings):
 
     database_url: str
 
-    # Comma-separated list of origins the dashboard frontend will be
-    # served from, e.g. "http://localhost:3000,http://localhost:5173".
-    # Kept as a plain string (not list[str]) so a simple comma-separated
-    # value in .env works without pydantic-settings' JSON-parsing rules
-    # for list-typed env vars getting in the way.
     cors_allowed_origins: str = (
         "http://localhost:3000,http://localhost:5173"
     )
+
+    ingestion_interval_seconds: int = 900
 
     model_config = SettingsConfigDict(
         env_file=".env",

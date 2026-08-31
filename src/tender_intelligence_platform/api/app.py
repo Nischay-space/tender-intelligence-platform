@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from tender_intelligence_platform.api.routes.ingestion import (
+    router as ingestion_router,
+)
 from tender_intelligence_platform.api.routes.tenders import (
     router as tender_router,
 )
@@ -24,6 +27,7 @@ app.add_middleware(
 
 
 app.include_router(tender_router)
+app.include_router(ingestion_router)
 
 
 @app.get("/health")

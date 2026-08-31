@@ -4,6 +4,9 @@ import pytest
 from sqlalchemy import func
 
 from tender_intelligence_platform.database.connection import SessionLocal
+from tender_intelligence_platform.database.models.ingestion_run import (
+    IngestionRunORM,
+)
 from tender_intelligence_platform.database.models.tender import TenderORM
 from tender_intelligence_platform.models.eligibility_result import (
     EligibilityResult,
@@ -29,20 +32,31 @@ def db_session():
     independent SessionLocal(), so seeded data must be committed for the
     route to see it — a rollback here would not undo an already-committed
     write. Explicit cleanup by primary key is the correct approach given
-    that constraint.
+    that constraint. IngestionRunORM rows are cleaned up the same way,
+    since IngestionRunRepository also commits through its own sessions.
     """
 
     with SessionLocal() as session:
-        watermark = (
+        tender_watermark = (
             session.query(func.max(TenderORM.id)).scalar() or 0
+        )
+
+        run_watermark = (
+            session.query(func.max(IngestionRunORM.id)).scalar() or 0
         )
 
         yield session
 
         session.rollback()
+
         session.query(TenderORM).filter(
-            TenderORM.id > watermark
+            TenderORM.id > tender_watermark
         ).delete(synchronize_session=False)
+
+        session.query(IngestionRunORM).filter(
+            IngestionRunORM.id > run_watermark
+        ).delete(synchronize_session=False)
+
         session.commit()
 
 
