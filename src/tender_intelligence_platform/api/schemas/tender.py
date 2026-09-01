@@ -58,3 +58,10 @@ class TenderListResponse(BaseModel):
     total: int
     skip: int
     limit: int
+
+
+class TenderFacetsResponse(BaseModel):
+    """Distinct category/state values present in the data."""
+
+    categories: list[str]
+    states: list[str]

@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getTenders } from '../api/client'
+import { getTenders, getTenderFacets } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import { StatusBadge } from '../components/StatusBadge'
 import { Breadcrumbs } from '../components/Breadcrumbs'
@@ -30,24 +31,38 @@ export function TenderList() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const skip = Number(searchParams.get('skip') ?? '0')
+  const search = searchParams.get('search') ?? ''
   const finalStatus = searchParams.get('final_status') ?? ''
   const category = searchParams.get('category') ?? ''
   const state = searchParams.get('state') ?? ''
   const sortBy = (searchParams.get('sort_by') as SortableField) ?? 'id'
   const sortOrder = (searchParams.get('sort_order') as SortOrder) ?? 'desc'
 
+  // Local, uncommitted search text — only pushed into the URL (and
+  // therefore into a real API request) on submit, not on every
+  // keystroke. Kept in sync if the URL changes from elsewhere (e.g.
+  // the browser back button).
+  const [searchDraft, setSearchDraft] = useState(search)
+
+  useEffect(() => {
+    setSearchDraft(search)
+  }, [search])
+
+  const { data: facets } = useAsync(getTenderFacets, [])
+
   const { data, loading, error } = useAsync(
     () =>
       getTenders({
         skip,
         limit: PAGE_SIZE,
+        search: search || undefined,
         final_status: finalStatus || undefined,
         category: category || undefined,
         state: state || undefined,
         sort_by: sortBy,
         sort_order: sortOrder,
       }),
-    [skip, finalStatus, category, state, sortBy, sortOrder],
+    [skip, search, finalStatus, category, state, sortBy, sortOrder],
   )
 
   function updateParam(key: string, value: string) {
@@ -66,6 +81,10 @@ export function TenderList() {
     setSearchParams(next)
   }
 
+  function submitSearch() {
+    updateParam('search', searchDraft.trim())
+  }
+
   const total = data?.total ?? 0
   const currentPage = Math.floor(skip / PAGE_SIZE) + 1
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -82,7 +101,22 @@ export function TenderList() {
         {activeFilterLabel}
       </h1>
 
-      <div className="mt-4 flex flex-wrap gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="flex gap-1.5">
+          <input
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submitSearch()
+            }}
+            placeholder="Search title or organization"
+            className={`${selectClass} w-64`}
+          />
+          <Button variant="primary" onClick={submitSearch}>
+            Search
+          </Button>
+        </div>
+
         <select
           value={finalStatus}
           onChange={(e) => updateParam('final_status', e.target.value)}
@@ -95,19 +129,31 @@ export function TenderList() {
           ))}
         </select>
 
-        <input
+        <select
           value={category}
           onChange={(e) => updateParam('category', e.target.value)}
-          placeholder="Category"
           className={selectClass}
-        />
+        >
+          <option value="">All categories</option>
+          {facets?.categories.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
 
-        <input
+        <select
           value={state}
           onChange={(e) => updateParam('state', e.target.value)}
-          placeholder="State"
           className={selectClass}
-        />
+        >
+          <option value="">All states</option>
+          {facets?.states.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
 
         <select
           value={sortBy}

@@ -84,9 +84,15 @@ export type SortableField =
 
 export type SortOrder = 'asc' | 'desc'
 
+export interface TenderFacetsResponse {
+  categories: string[]
+  states: string[]
+}
+
 export interface TenderListParams {
   skip?: number
   limit?: number
+  search?: string
   final_status?: string
   category?: string
   state?: string

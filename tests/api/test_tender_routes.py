@@ -3,12 +3,6 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from tender_intelligence_platform.api.app import app
-from tender_intelligence_platform.repositories.tender_evaluation_repository import (
-    TenderEvaluationRepository,
-)
-from tender_intelligence_platform.repositories.tender_repository import (
-    TenderRepository,
-)
 from tender_intelligence_platform.models.eligibility_result import (
     EligibilityResult,
 )
@@ -17,6 +11,12 @@ from tender_intelligence_platform.models.evaluation_result import (
 )
 from tender_intelligence_platform.models.filter_result import (
     FilterResult,
+)
+from tender_intelligence_platform.repositories.tender_evaluation_repository import (
+    TenderEvaluationRepository,
+)
+from tender_intelligence_platform.repositories.tender_repository import (
+    TenderRepository,
 )
 
 
@@ -122,6 +122,94 @@ def test_list_tenders_rejects_invalid_sort_by(db_session):
     )
 
     assert response.status_code == 422
+
+
+def test_list_tenders_search_matches_title(db_session, make_tender):
+    repository = TenderRepository(db_session)
+
+    tender = repository.create(
+        make_tender(tender_title="Highway Bridge Repair Contract")
+    )
+    db_session.commit()
+
+    response = client.get(
+        "/api/v1/tenders",
+        params={"search": "bridge repair", "limit": 100},
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+    assert any(
+        item["tender_id"] == tender.tender_id
+        for item in body["items"]
+    )
+
+
+def test_list_tenders_search_matches_organization(db_session, make_tender):
+    repository = TenderRepository(db_session)
+
+    tender = repository.create(
+        make_tender(organization="Ministry of Rural Development")
+    )
+    db_session.commit()
+
+    response = client.get(
+        "/api/v1/tenders",
+        params={"search": "rural development", "limit": 100},
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+    assert any(
+        item["tender_id"] == tender.tender_id
+        for item in body["items"]
+    )
+
+
+def test_list_tenders_search_excludes_non_matches(db_session, make_tender):
+    repository = TenderRepository(db_session)
+
+    tender = repository.create(
+        make_tender(
+            tender_title="Unrelated Water Supply Project",
+            organization="Municipal Corporation",
+        )
+    )
+    db_session.commit()
+
+    response = client.get(
+        "/api/v1/tenders",
+        params={"search": "zzz-definitely-no-match", "limit": 100},
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+    assert all(
+        item["tender_id"] != tender.tender_id
+        for item in body["items"]
+    )
+
+
+def test_tender_facets_includes_seeded_values(db_session, make_tender):
+    repository = TenderRepository(db_session)
+
+    repository.create(
+        make_tender(category="Zzz-Test-Category", state="Zzz-Test-State")
+    )
+    db_session.commit()
+
+    response = client.get("/api/v1/tenders/facets")
+
+    assert response.status_code == 200
+
+    body = response.json()
+    assert "Zzz-Test-Category" in body["categories"]
+    assert "Zzz-Test-State" in body["states"]
+    # facets must be distinct values, not raw rows
+    assert len(body["categories"]) == len(set(body["categories"]))
 
 
 def test_get_tender_by_id_returns_200(db_session, make_tender):
@@ -260,6 +348,7 @@ def test_tender_stats_returns_counts(db_session, make_tender):
     assert body["review_required"] >= 1
     assert body["unevaluated"] >= 1
     assert body["total"] >= 5
+
 
 def test_cors_header_present_for_allowed_origin():
     response = client.get(

@@ -4,6 +4,7 @@ import type {
   TenderResponse,
   TenderEvaluationResponse,
   TenderStatsResponse,
+  TenderFacetsResponse,
 } from '../types/tender'
 
 const API_BASE_URL =
@@ -66,6 +67,7 @@ export function getTenders(
   return request<TenderListResponse>('/api/v1/tenders', {
     skip: params.skip,
     limit: params.limit,
+    search: params.search,
     final_status: params.final_status,
     category: params.category,
     state: params.state,
@@ -73,6 +75,10 @@ export function getTenders(
     sort_by: params.sort_by,
     sort_order: params.sort_order,
   })
+}
+
+export function getTenderFacets(): Promise<TenderFacetsResponse> {
+  return request<TenderFacetsResponse>('/api/v1/tenders/facets')
 }
 
 export function getTender(tenderId: string): Promise<TenderResponse> {

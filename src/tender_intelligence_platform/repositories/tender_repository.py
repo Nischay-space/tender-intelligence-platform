@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 from tender_intelligence_platform.database.models.tender import TenderORM
 from tender_intelligence_platform.database.models.tender_evaluation import (
@@ -7,8 +7,6 @@ from tender_intelligence_platform.database.models.tender_evaluation import (
 from tender_intelligence_platform.models.tender import Tender
 
 
-# Whitelist of columns GET /tenders is allowed to sort by. Keep this in
-# sync with the SortableField Literal in api/routes/tenders.py.
 SORTABLE_FIELDS = {
     "id": TenderORM.id,
     "created_at": TenderORM.created_at,
@@ -98,12 +96,23 @@ class TenderRepository:
         self,
         statement,
         *,
-        final_status: str | None,
-        category: str | None,
-        state: str | None,
-        status: str | None,
+        search: str | None = None,
+        final_status: str | None = None,
+        category: str | None = None,
+        state: str | None = None,
+        status: str | None = None,
     ):
         """Apply the shared filter set to a select statement."""
+
+        if search is not None:
+            like_pattern = f"%{search}%"
+
+            statement = statement.where(
+                or_(
+                    TenderORM.tender_title.ilike(like_pattern),
+                    TenderORM.organization.ilike(like_pattern),
+                )
+            )
 
         if final_status is not None:
             statement = statement.join(
@@ -135,6 +144,7 @@ class TenderRepository:
         skip: int = 0,
         limit: int = 50,
         *,
+        search: str | None = None,
         final_status: str | None = None,
         category: str | None = None,
         state: str | None = None,
@@ -142,7 +152,7 @@ class TenderRepository:
         sort_by: str = "id",
         sort_order: str = "desc",
     ) -> list[TenderORM]:
-        """Return tenders with pagination, filtering, and sorting."""
+        """Return tenders with pagination, filtering, sorting, and search."""
 
         sort_column = SORTABLE_FIELDS.get(
             sort_by, TenderORM.id
@@ -160,6 +170,7 @@ class TenderRepository:
 
         statement = self._apply_filters(
             statement,
+            search=search,
             final_status=final_status,
             category=category,
             state=state,
@@ -179,6 +190,7 @@ class TenderRepository:
     def count(
         self,
         *,
+        search: str | None = None,
         final_status: str | None = None,
         category: str | None = None,
         state: str | None = None,
@@ -192,6 +204,7 @@ class TenderRepository:
 
         statement = self._apply_filters(
             statement,
+            search=search,
             final_status=final_status,
             category=category,
             state=state,
@@ -200,7 +213,29 @@ class TenderRepository:
 
         return self._session.scalar(statement) or 0
 
-    def get_status_counts(self) -> dict[str | None, int]:
+    def get_facets(self) -> dict[str, list[str]]:
+        """Return distinct category and state values present in the data."""
+
+        categories = self._session.scalars(
+            select(TenderORM.category)
+            .where(TenderORM.category.is_not(None))
+            .distinct()
+            .order_by(TenderORM.category)
+        ).all()
+
+        states = self._session.scalars(
+            select(TenderORM.state)
+            .where(TenderORM.state.is_not(None))
+            .distinct()
+            .order_by(TenderORM.state)
+        ).all()
+
+        return {
+            "categories": list(categories),
+            "states": list(states),
+        }
+
+    def get_status_counts(self) -> dict:
         """
         Return tender counts grouped by evaluation final_status.
 

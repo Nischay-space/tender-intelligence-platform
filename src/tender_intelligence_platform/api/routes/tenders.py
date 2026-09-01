@@ -9,6 +9,7 @@ from tender_intelligence_platform.api.schemas.stats import (
     TenderStatsResponse,
 )
 from tender_intelligence_platform.api.schemas.tender import (
+    TenderFacetsResponse,
     TenderListResponse,
     TenderResponse,
 )
@@ -55,6 +56,15 @@ def get_tenders(
         le=100,
         description="Maximum number of tenders to return",
     ),
+    search: str | None = Query(
+        None,
+        min_length=1,
+        max_length=200,
+        description=(
+            "Case-insensitive substring match against tender title "
+            "or organization"
+        ),
+    ),
     final_status: str | None = Query(
         None,
         description=(
@@ -83,12 +93,13 @@ def get_tenders(
         description="Sort direction",
     ),
 ):
-    """Return stored tenders with pagination, filtering, and sorting."""
+    """Return stored tenders with pagination, filtering, sorting, and search."""
 
     with SessionLocal() as session:
         repository = TenderRepository(session)
 
         filters = dict(
+            search=search,
             final_status=final_status,
             category=category,
             state=state,
@@ -134,6 +145,25 @@ def get_tender_stats():
             review_required=counts.get("REVIEW_REQUIRED", 0),
             unevaluated=counts.get(None, 0),
         )
+
+
+@router.get(
+    "/facets",
+    response_model=TenderFacetsResponse,
+)
+def get_tender_facets():
+    """
+    Return the distinct category and state values actually present in
+    the data, for populating real dropdown filters in the dashboard
+    instead of free-text inputs.
+    """
+
+    with SessionLocal() as session:
+        repository = TenderRepository(session)
+
+        facets = repository.get_facets()
+
+        return TenderFacetsResponse(**facets)
 
 
 @router.get(
