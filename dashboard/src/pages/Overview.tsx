@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { getTenderStats } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
+import { IngestionStatusCard } from '../components/IngestionStatusCard'
 
 interface StatCardProps {
   label: string
@@ -53,6 +54,10 @@ export function Overview() {
       <p className="mt-1 text-slate">
         Evaluation outcomes across {data.total} discovered tenders.
       </p>
+
+      <div className="mt-4">
+        <IngestionStatusCard />
+      </div>
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Total tenders" value={data.total} accentClass="text-ink" />

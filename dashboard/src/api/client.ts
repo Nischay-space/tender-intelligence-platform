@@ -1,3 +1,4 @@
+import type { IngestionRunResponse } from '../types/ingestion'
 import type {
   TenderListParams,
   TenderListResponse,
@@ -97,4 +98,8 @@ export function getTenderEvaluation(
 
 export function getTenderStats(): Promise<TenderStatsResponse> {
   return request<TenderStatsResponse>('/api/v1/tenders/stats')
+}
+
+export function getIngestionStatus(): Promise<IngestionRunResponse> {
+  return request<IngestionRunResponse>('/api/v1/ingestion/status')
 }
