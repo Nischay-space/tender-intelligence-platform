@@ -5,8 +5,11 @@ import { StatusBadge } from '../components/StatusBadge'
 import { Breadcrumbs } from '../components/Breadcrumbs'
 import type { RuleResultResponse } from '../types/tender'
 
-function formatCurrency(value: number | null, currency: string | null) {
-  if (value === null) return '—'
+function formatCurrency(
+  value: number | null | undefined,
+  currency: string | null | undefined,
+) {
+  if (value === null || value === undefined) return '—'
   return `${currency ?? ''} ${value.toLocaleString()}`.trim()
 }
 

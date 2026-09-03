@@ -1,13 +1,4 @@
-export interface IngestionRunResponse {
-  id: number
-  started_at: string
-  finished_at: string | null
-  status: string
+import type { components } from './api'
 
-  discovered: number
-  successful: number
-  failed: number
-  skipped: number
-
-  error: string | null
-}
+export type IngestionRunResponse =
+  components['schemas']['IngestionRunResponse']

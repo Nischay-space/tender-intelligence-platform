@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getTenders, getTenderFacets } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
@@ -6,6 +6,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { Breadcrumbs } from '../components/Breadcrumbs'
 import { Button } from '../components/Button'
 import type { SortableField, SortOrder } from '../types/tender'
+
 
 const PAGE_SIZE = 20
 
@@ -43,10 +44,12 @@ export function TenderList() {
   // keystroke. Kept in sync if the URL changes from elsewhere (e.g.
   // the browser back button).
   const [searchDraft, setSearchDraft] = useState(search)
+  const [prevSearch, setPrevSearch] = useState(search)
 
-  useEffect(() => {
+  if (search !== prevSearch) {
+    setPrevSearch(search)
     setSearchDraft(search)
-  }, [search])
+  }
 
   const { data: facets } = useAsync(getTenderFacets, [])
 
